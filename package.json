@@ -1,0 +1,62 @@
+{
+  "name": "deltaforce-hud-tool",
+  "version": "0.0.1-alpha.1",
+  "description": "Delta Force Battlefield HUD Tool - author tactical in-game HUD alert cards and export them as MP4 or transparent WebM.",
+  "main": "main.js",
+  "author": "Delta Force Battlefield HUD Tool contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/Robot27-xiaosong/deltaforce-hud-tool#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Robot27-xiaosong/deltaforce-hud-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Robot27-xiaosong/deltaforce-hud-tool/issues"
+  },
+  "keywords": [
+    "electron",
+    "hud",
+    "game-ui",
+    "tactical-shooter",
+    "video-export",
+    "webm",
+    "alpha-channel"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.df.hudtool",
+    "productName": "三角洲全面战场自定义局内提示工具",
+    "win": {
+      "target": "portable",
+      "artifactName": "三角洲全面战场自定义局内提示工具.exe"
+    },
+    "portable": {
+      "artifactName": "三角洲全面战场自定义局内提示工具.exe"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "card.html",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg.exe",
+        "to": "ffmpeg.exe"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

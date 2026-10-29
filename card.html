@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>三角洲全面战场自定义局内提示工具 v0.0.1-alpha.1</title>
+<style>
+@font-face{font-family:"DFUI";src:url("assets/fonts/FZLTZHJW.ttf") format("truetype");}
+@font-face{font-family:"DFUI-L";src:url("assets/fonts/FZLTHJW.ttf") format("truetype");}
+
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;background:#07090c;overflow:hidden;
+  font-family:"DFUI","Microsoft YaHei",sans-serif;color:#c8d6e0;}
+
+/* ══════════ 整体布局 ══════════ */
+#app{display:flex;height:100vh;}
+#sidebar{width:340px;flex:0 0 340px;background:#0d1117;border-right:1px solid #1c2733;
+  display:flex;flex-direction:column;overflow:hidden;}
+#stageArea{flex:1;position:relative;background:#0a0d12;overflow:hidden;}
+
+/* ══════════ 左侧面板 ══════════ */
+.sideHeader{padding:18px 20px 14px;border-bottom:1px solid #1c2733;}
+.sideHeader h1{margin:0;font-size:17px;color:#e8f0f5;font-weight:600;letter-spacing:.5px;}
+.sideMeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;}
+.sideHeader p{margin:0;font-size:11px;color:#5a7385;letter-spacing:1px;}
+.ver{
+  font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:10px;line-height:1;
+  letter-spacing:.3px;color:#4ec9d8;background:#101c24;border:1px solid #244252;
+  border-radius:9px;padding:3px 7px;white-space:nowrap;user-select:text;
+}
+
+.sideBody{flex:1;overflow-y:auto;padding:14px 16px;}
+.sideBody::-webkit-scrollbar{width:6px;}
+.sideBody::-webkit-scrollbar-thumb{background:#1e2c38;border-radius:3px;}
+
+.section{margin-bottom:18px;}
+.sectionTitle{font-size:11px;color:#5a7385;letter-spacing:1.5px;margin:0 0 10px;
+  text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.sectionTitle::after{content:'';flex:1;height:1px;background:#1c2733;}
+
+/* 即时播报 */
+.field{margin-bottom:8px;}
+.field label{display:block;font-size:11px;color:#7a93a6;margin-bottom:4px;}
+.field input,.field select{
+  width:100%;background:#111920;border:1px solid #1e2c38;color:#dce8f0;
+  padding:7px 10px;border-radius:5px;font-size:13px;font-family:inherit;outline:none;
+}
+.field input:focus,.field select:focus{border-color:#3a7ca5;}
+.row2{display:flex;gap:8px;}
+.row2 .field{flex:1;}
+
+.btnFire{
+  width:100%;padding:11px;border:none;border-radius:6px;cursor:pointer;
+  background:linear-gradient(180deg,#d97a2b 0%,#b85e18 100%);
+  color:#fff;font-size:14px;font-weight:600;letter-spacing:2px;font-family:inherit;
+  transition:filter .15s;
+}
+.btnFire:hover{filter:brightness(1.15);}
+.btnFire:active{transform:translateY(1px);}
+.btnFire:disabled{opacity:.5;cursor:wait;}
+
+/* 分类 tabs */
+.tabs{display:flex;gap:4px;margin-bottom:10px;}
+.tab{flex:1;padding:7px 0;text-align:center;font-size:12px;border-radius:5px;
+  background:#111920;color:#7a93a6;cursor:pointer;border:1px solid transparent;}
+.tab.active{background:#16222c;color:#4ec9d8;border-color:#2a4a5c;}
+
+/* 提示按钮网格 */
+.msgGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.msgBtn{
+  background:#111920;border:1px solid #1e2c38;border-radius:5px;padding:8px;
+  cursor:pointer;text-align:left;color:#c8d6e0;font-size:11px;line-height:1.3;
+  display:flex;gap:8px;align-items:center;transition:all .12s;font-family:inherit;
+}
+.msgBtn:hover{background:#16222c;border-color:#2a4a5c;}
+.msgBtn.playing{border-color:#d97a2b;background:#2a1d10;}
+.msgBtn .ico{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center;
+  background:#0a0e12;border-radius:4px;font-size:14px;}
+.msgBtn .ico img{width:22px;height:22px;object-fit:contain;}
+.msgBtn .meta{flex:1;min-width:0;}
+.msgBtn .meta .t{color:#dce8f0;line-height:1.35;word-break:break-word;}
+.msgBtn .meta .tag{font-size:9px;color:#5a7385;margin-top:3px;line-height:1.3;}
+
+/* 底部设置 */
+.sideFooter{padding:12px 16px;border-top:1px solid #1c2733;background:#0b0f14;}
+.footRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;}
+.footRow label{color:#7a93a6;white-space:nowrap;}
+.footRow input[type=number]{width:70px;background:#111920;border:1px solid #1e2c38;
+  color:#dce8f0;padding:4px 6px;border-radius:4px;font-size:12px;}
+.footRow select{background:#111920;border:1px solid #1e2c38;color:#dce8f0;
+  padding:4px 6px;border-radius:4px;font-size:12px;flex:1;}
+.footRow input[type=checkbox]{accent-color:#d97a2b;}
+.btnExport{
+  width:100%;padding:9px;border:1px solid #2a4a5c;background:#14202a;color:#4ec9d8;
+  border-radius:5px;cursor:pointer;font-size:12px;letter-spacing:1px;font-family:inherit;
+}
+.btnExport:hover{background:#1a2e3c;}
+.exportStatus{font-size:11px;color:#7fdb96;text-align:center;margin-top:6px;min-height:14px;}
+
+/* ══════════ 舞台区 ══════════ */
+#stageBar{position:absolute;top:12px;right:16px;z-index:10;display:flex;gap:8px;align-items:center;
+  background:rgba(10,13,18,.8);padding:6px 10px;border-radius:5px;font-size:11px;color:#7a93a6;}
+#stageBar label{display:flex;align-items:center;gap:4px;cursor:pointer;}
+#stageBar input{accent-color:#4ec9d8;}
+
+#wrap{position:absolute;inset:0;}
+#stage{
+  position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  transform-origin:50% 50%;transform:translate(-50%,-50%) scale(1);
+  background:#0b0e12;overflow:hidden;
+}
+#stage.chroma{background:#0400f4;}
+
+/* ══════════ 版式 A: 带图标大卡 ══════════ */
+.card{
+  position:absolute;left:243px;top:403px;width:1481px;height:326px;
+  display:flex;overflow:hidden;will-change:transform;visibility:hidden;
+  transform-origin:50% 50%;transform:scaleX(0);
+}
+.base{position:absolute;inset:0;background:rgb(51,51,51);}
+.baseWhite{position:absolute;inset:0;background:#fff;will-change:opacity;}
+.iconPanel{
+  width:340px;flex:0 0 340px;height:100%;position:relative;
+  display:grid;place-items:center;z-index:2;
+}
+.iconPanel .dark{position:absolute;inset:0;opacity:0;
+  background:linear-gradient(180deg,#0e1312 0%,#050505 100%);}
+.iconPanel img{width:250px;height:240px;object-fit:contain;
+  opacity:0;position:relative;z-index:1;will-change:transform,filter;}
+.textPanel{flex:1;height:100%;position:relative;z-index:2;}
+.sweep{position:absolute;inset:0;background:rgb(51,51,51);will-change:clip-path;}
+.titleWrap{position:absolute;top:68px;left:0;right:0;will-change:transform;}
+.title{
+  position:absolute;top:0;left:0;right:0;text-align:center;
+  font-size:84px;line-height:1;font-weight:400;letter-spacing:0;
+  color:rgb(94,94,94);white-space:nowrap;
+}
+.title.titleWhite{color:#fff;opacity:0;}
+.dash{position:absolute;left:44px;right:44px;top:170px;opacity:0;
+  border-top:2px dashed rgba(255,255,255,.42);}
+.sub{
+  position:absolute;top:226px;left:0;right:0;opacity:0;
+  font-family:"DFUI-L","DFUI";font-size:56px;line-height:1;letter-spacing:0;
+  color:#a09ea0;text-align:center;white-space:nowrap;will-change:transform;
+}
+
+/* ══════════ 版式 B: 纯文字卡 ══════════ */
+.card2{
+  position:absolute;overflow:hidden;visibility:hidden;will-change:transform;
+  transform-origin:50% 50%;transform:scaleX(0);
+}
+.card2.banner{left:272px;top:410px;width:1376px;height:292px;}
+.card2.toast{left:110px;top:432px;width:1700px;height:248px;}
+.base2{position:absolute;inset:0;background:#fff;}
+.rule{position:absolute;left:0;right:0;height:2px;background:#787878;opacity:0;z-index:2;}
+.rule.top{top:0;} .rule.bot{bottom:0;}
+.title2Wrap{position:absolute;left:0;right:0;z-index:2;will-change:transform;}
+.title2{
+  position:absolute;top:0;left:0;right:0;text-align:center;white-space:nowrap;
+  font-size:84px;line-height:1;color:rgb(61,61,61);opacity:0;
+}
+.title2.title2White{color:#fff;opacity:0;}
+.banner .title2Wrap{top:54px;} .toast .title2Wrap{top:78px;}
+.card2.banner.noSub .title2Wrap{top:104px;}
+.dash2{position:absolute;left:30px;right:30px;opacity:0;z-index:2;
+  border-top:2px dashed rgba(255,255,255,.42);}
+.banner .dash2{top:172px;} .toast .dash2{top:120px;}
+.card2.banner.noSub .dash2{top:146px;}
+.sub2{
+  position:absolute;left:0;right:0;text-align:center;white-space:nowrap;
+  font-family:"DFUI-L","DFUI";font-size:48px;line-height:1;color:#a09ea0;
+  opacity:0;z-index:2;will-change:transform;
+}
+.banner .sub2{top:199px;} .toast .sub2{display:none;}
+
+.tint,.tint2{position:absolute;inset:0;background:#0400f4;opacity:0;z-index:4;}
+.veil,.veil2{position:absolute;inset:0;background:#fff;z-index:5;
+  transform-origin:50% 50%;transform:scaleX(0);will-change:transform;}
+.half,.half2{position:absolute;top:0;height:100%;width:50%;background:#fff;
+  z-index:5;transform:scaleX(0);will-change:transform;}
+.halfL,.halfL2{left:0;transform-origin:0 50%;}
+.halfR,.halfR2{right:0;transform-origin:100% 50%;}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ══════════ 左侧控制面板 ══════════ -->
+  <aside id="sidebar">
+    <div class="sideHeader">
+      <h1>局内提示工具</h1>
+      <div class="sideMeta">
+        <p>DELTA FORCE · 全面战场</p>
+        <span class="ver" id="appVersion">v0.0.1-alpha.1</span>
+      </div>
+    </div>
+
+    <div class="sideBody">
+      <!-- 即时播报 -->
+      <div class="section">
+        <div class="sectionTitle">即时播报</div>
+        <div class="field">
+          <label>标题</label>
+          <input type="text" id="inTitle" placeholder="例：我军已呼叫烟幕">
+        </div>
+        <div class="field">
+          <label>副标题</label>
+          <input type="text" id="inSub" placeholder="例：利用烟幕掩护，迅速隐蔽行动">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>版式</label>
+            <select id="inType">
+              <option value="icon">图标大卡</option>
+              <option value="banner">横幅</option>
+              <option value="toast">窄条</option>
+            </select>
+          </div>
+          <div class="field" id="iconFieldWrap" style="flex:1">
+            <label>图标</label>
+            <select id="inIcon">
+              <option value="skill_p1">炮击</option>
+              <option value="skill_p2">烟幕</option>
+              <option value="skill_p3">制导</option>
+              <option value="skill_p4">信标</option>
+              <option value="skill_p5">载具</option>
+            </select>
+          </div>
+        </div>
+        <button class="btnFire" id="btnFire">立 即 弹 出</button>
+      </div>
+
+      <!-- 提示库 -->
+      <div class="section">
+        <div class="sectionTitle">提示库</div>
+        <div class="tabs" id="tabs">
+          <div class="tab active" data-cat="skill">战术技能</div>
+          <div class="tab" data-cat="point">据点事件</div>
+          <div class="tab" data-cat="event">全局事件</div>
+        </div>
+        <div class="msgGrid" id="msgGrid"></div>
+      </div>
+    </div>
+
+    <!-- 底部设置 -->
+    <div class="sideFooter">
+      <div class="footRow">
+        <label>停留</label>
+        <input type="number" id="inHold" value="1500" step="100">
+        <span style="color:#5a7385">ms</span>
+      </div>
+      <div class="footRow">
+        <label>导出背景</label>
+        <select id="selExportBg">
+          <option value="chroma">蓝幕 MP4（抠像）</option>
+          <option value="black">黑底 MP4</option>
+          <option value="transparent">透明 WebM</option>
+        </select>
+      </div>
+      <button class="btnExport" id="btnExport">导出当前提示为视频</button>
+      <div class="exportStatus" id="exportStatus"></div>
+    </div>
+  </aside>
+
+  <!-- ══════════ 右侧舞台预览 ══════════ -->
+  <main id="stageArea">
+    <div id="stageBar">
+      <label><input type="checkbox" id="chkChroma" checked> 蓝幕背景</label>
+      <span style="opacity:.4">|</span>
+      <span id="fpsHint">舞台预览</span>
+    </div>
+    <div id="wrap">
+      <div id="stage" class="chroma">
+        <!-- 版式 A -->
+        <div class="card" id="card">
+          <div class="base" id="base"></div>
+          <div class="baseWhite" id="baseWhite"></div>
+          <div class="iconPanel">
+            <div class="dark" id="dark"></div>
+            <img id="icon" src="assets/skill_p2.png" alt="">
+          </div>
+          <div class="textPanel">
+            <div class="sweep" id="sweep"></div>
+            <div class="titleWrap" id="titleWrap">
+              <div class="title" id="title"></div>
+              <div class="title titleWhite" id="titleWhite"></div>
+            </div>
+            <div class="dash" id="dash"></div>
+            <div class="sub" id="sub"></div>
+          </div>
+          <div class="tint" id="tint"></div>
+          <div class="veil" id="veil"></div>
+          <div class="half halfL" id="halfL"></div>
+          <div class="half halfR" id="halfR"></div>
+        </div>
+        <!-- 版式 B -->
+        <div class="card2 banner" id="card2">
+          <div class="base2" id="base2"></div>
+          <div class="rule top" id="ruleT"></div>
+          <div class="rule bot" id="ruleB"></div>
+          <div class="title2Wrap" id="title2Wrap">
+            <div class="title2" id="title2"></div>
+            <div class="title2 title2White" id="title2White"></div>
+          </div>
+          <div class="dash2" id="dash2"></div>
+          <div class="sub2" id="sub2"></div>
+          <div class="tint2" id="tint2"></div>
+          <div class="veil2" id="veil2"></div>
+          <div class="half2 halfL2" id="halfL2"></div>
+          <div class="half2 halfR2" id="halfR2"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ══════════ 关键帧数据 (逐帧实测, 不动) ══════════ */
+const W_KEYS = [
+  [0.000,0.003],[0.033,0.020],[0.067,0.055],[0.100,0.117],[0.133,0.209],
+  [0.167,0.329],[0.200,0.472],[0.233,0.621],[0.267,0.759],[0.300,0.869],
+  [0.333,0.942],[0.367,0.982],[0.400,1.000]
+];
+const G_KEYS = [
+  [0.000,255],[0.033,253],[0.067,248],[0.100,237],[0.133,223],[0.167,203],
+  [0.200,180],[0.233,156],[0.267,133],[0.300,115],[0.333,103],[0.367,97],
+  [0.400,94],[0.767,94],[0.800,69],[0.833,51],[9.0,51]
+];
+const DARK_KEYS = [
+  [0.567,0.000],[0.600,0.195],[0.633,0.345],[0.667,0.448],[0.700,0.517],
+  [0.733,0.598],[0.767,0.667],[0.800,0.747],[0.833,0.828],[0.867,0.920],
+  [0.900,0.954],[0.933,0.989],[1.000,1.000]
+];
+const TITLE_KEYS = [[0.400,94],[0.433,150],[0.467,190],[0.500,225],[0.567,255]];
+const TITLE_Y = [
+  [0.500,67],[0.533,67],[0.600,69],[0.700,68],[0.800,67],
+  [0.833,57],[0.867,35],[0.900,12],[0.933,1],[0.967,-3],[1.000,0],[9,0]
+];
+const SWEEP_R = [
+  [0.433,.387],[0.467,.399],[0.500,.419],[0.533,.448],[0.567,.489],
+  [0.600,.540],[0.633,.603],[0.667,.672],[0.700,.746],[0.733,.822],
+  [0.767,.892],[0.800,.954],[0.833,1]
+];
+const DASH_T=[0.467,0.633];
+const SUB_Y = [
+  [0.700,-51],[0.833,-51],[0.867,-40],[0.900,-20],
+  [0.933,-7],[0.967,-2],[1.000,0],[1.033,0],[9,0]
+];
+const SUB_T=[0.867,1.033];
+const ICON_KEYS=[
+  [0.500,1.35,1.70],[0.533,1.22,1.30],[0.567,1.08,1.00],[0.667,1.00,1.00]
+];
+const VEIL_KEYS=[
+  [0.000,0.016],[0.033,0.08],[0.067,0.18],[0.100,0.32],[0.133,0.50],
+  [0.167,0.68],[0.200,0.82],[0.233,0.93],[0.267,1.0]
+];
+const VEIL_HIDE=0.300;
+const HALF_R=[0.300,0.75];
+const HALF_L=[0.300,0.82];
+const TINT_KEYS=[[0.000,0],[0.15,0.22],[0.30,0]];
+
+const W_B1=[[0,.012],[.033,.041],[.067,.099],[.1,.192],[.133,.318],
+  [.167,.472],[.2,.634],[.233,.779],[.267,1]];
+const W_B2=[[0,.005],[.033,.035],[.067,.108],[.1,.235],[.133,.414],
+  [.167,.614],[.2,1]];
+const B_GRAY=[[0,255],[.267,255],[.333,61],[9,61]];
+const B_TITLE=[[.3,120],[.433,175],[.567,225],[.733,255]];
+const B_TITLE_Y=[
+  [0.3,92],[0.4,92],
+  [0.433,78],[0.467,58],[0.500,36],[0.533,16],[0.567,4],[0.600,0],[9,0]
+];
+const B_DASH=[.3,.667];
+const B_SUB_Y=[[0.5,-39],[0.6,-30],[0.7,-15],[0.8,-5],[0.9,0],[9,0]];
+const B_SUB=[.5,.9];
+const B_TINT=[[0,0],[.15,.22],[.3,0]];
+const B_VEIL=[[.0,.02],[.05,.15],[.1,.4],[.15,.7],[.2,1]];
+const B_VEIL_HIDE=.22;
+const B_HALF_R=[.22,.65];
+const B_HALF_L=[.22,.72];
+const GAP_MS=600;
+
+/* ══════════ 提示库 (带分类) ══════════ */
+const MSG=[
+  {cat:'skill',type:'icon',t:'我军已呼叫烟幕',s:'利用烟幕掩护，迅速隐蔽行动',icon:'skill_p2'},
+  {cat:'skill',type:'icon',t:'我军已呼叫炮击',s:'利用炮火掩护，迅速开始行动',icon:'skill_p1'},
+  {cat:'skill',type:'icon',t:'我军已发射制导导弹',s:'评估目标区域损害，快速清理残余敌人',icon:'skill_p3'},
+  {cat:'skill',type:'icon',t:'战略信标已部署',s:'召唤战略信标，帮助队友快速部署',icon:'skill_p4'},
+  {cat:'skill',type:'icon',t:'空投载具就位',s:'利用载具，改变战局',icon:'skill_p5'},
+  {cat:'point',type:'banner',t:'C1受到致命打击',s:'C1据点成为我方前线基地'},
+  {cat:'point',type:'banner',t:'尖塔结构严重受损',s:''},
+  {cat:'event',type:'banner',t:'我们被标记为高威胁目标',s:'小心那些对你虎视眈眈的敌人'},
+  {cat:'event',type:'banner',t:'我方标记了高威胁目标',s:'摧毁它们以获得多倍得分'},
+  {cat:'event',type:'toast',t:'我方已激活终止程序',s:''},
+  {cat:'event',type:'toast',t:'敌方已激活终止程序',s:''},
+  {cat:'event',type:'toast',t:'检测到重大地震来袭！',s:''},
+  {cat:'event',type:'toast',t:'地层波动已达临界点！',s:''},
+];
+
+/* ══════════ DOM 引用 ══════════ */
+const card=document.getElementById('card'), base=document.getElementById('base');
+const baseWhite=document.getElementById('baseWhite');
+const elT=document.getElementById('title'), elTW=document.getElementById('titleWhite');
+const elTWrap=document.getElementById('titleWrap'), elS=document.getElementById('sub');
+const elI=document.getElementById('icon'), elD=document.getElementById('dash');
+const dark=document.getElementById('dark'), tint=document.getElementById('tint');
+const veil=document.getElementById('veil'), halfL=document.getElementById('halfL'),
+      halfR=document.getElementById('halfR'), sweep=document.getElementById('sweep');
+const card2=document.getElementById('card2'), base2=document.getElementById('base2');
+const elT2=document.getElementById('title2'), elT2W=document.getElementById('title2White');
+const elT2Wrap=document.getElementById('title2Wrap');
+const elS2=document.getElementById('sub2'),
+      elD2=document.getElementById('dash2'), ruleT=document.getElementById('ruleT'),
+      ruleB=document.getElementById('ruleB'), tint2=document.getElementById('tint2'),
+      veil2=document.getElementById('veil2'), halfL2=document.getElementById('halfL2'),
+      halfR2=document.getElementById('halfR2');
+const bodyA=[base,baseWhite,card.querySelector('.iconPanel'),card.querySelector('.textPanel')];
+const bodyB=[base2,ruleT,ruleB,elT2Wrap,elD2,elS2];
+function setBody(layers,v){ layers.forEach(l=>l.style.visibility=v); }
+
+let idx=-1, running=false, currentRec=null;
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const lerp=(a,b,k)=>a+(b-a)*k;
+function sample(keys,t){
+  if(t<=keys[0][0]) return keys[0][1];
+  for(let i=1;i<keys.length;i++){
+    if(t<=keys[i][0]){
+      const k=(t-keys[i-1][0])/(keys[i][0]-keys[i-1][0]);
+      return lerp(keys[i-1][1],keys[i][1],k);
+    }
+  }
+  return keys[keys.length-1][1];
+}
+function ramp(win,t){return clamp01((t-win[0])/(win[1]-win[0]));}
+
+/* 舞台缩放: 适配右侧区域 */
+function fit(){
+  const area=document.getElementById('stageArea');
+  const aw=area.clientWidth, ah=area.clientHeight;
+  const s=Math.min(aw/1920, ah/1080);
+  document.getElementById('stage').style.transform=
+    'translate(-50%,-50%) scale('+s+')';
+}
+addEventListener('resize',fit); fit();
+
+/* ══════════ 渲染引擎 (保留原逻辑) ══════════ */
+function renderEnter(el){
+  card.style.visibility='visible';
+  setBody(bodyA,'visible');
+  card.style.transform='scaleX('+sample(W_KEYS,el).toFixed(4)+')';
+  const g=sample(G_KEYS,el);
+  baseWhite.style.opacity=clamp01((g-51)/(255-51)).toFixed(3);
+  dark.style.opacity=sample(DARK_KEYS,el).toFixed(3);
+  const tg=sample(TITLE_KEYS,el);
+  elTW.style.opacity=clamp01((tg-94)/(255-94)).toFixed(3);
+  const ty=el<0.5?67:sample(TITLE_Y,el);
+  elTWrap.style.transform='translateY('+ty.toFixed(1)+'px)';
+  if(el<0.433){ sweep.style.clipPath='inset(0 100% 0 0)'; }
+  else{
+    const r=sample(SWEEP_R,el);
+    sweep.style.clipPath='inset(0 '+((1-r)*100).toFixed(2)+'% 0 0)';
+  }
+  elD.style.opacity=ramp(DASH_T,el).toFixed(3);
+  const sy=el<0.867?-51:sample(SUB_Y,el);
+  elS.style.transform='translateY('+sy.toFixed(1)+'px)';
+  elS.style.opacity=ramp(SUB_T,el).toFixed(3);
+  if(el<0.5){ elI.style.opacity='0'; }
+  else{
+    const sc=sample(ICON_KEYS.map(k=>[k[0],k[1]]),el);
+    const br=sample(ICON_KEYS.map(k=>[k[0],k[2]]),el);
+    elI.style.opacity='1';
+    elI.style.transform='scale('+sc.toFixed(3)+')';
+    elI.style.filter='brightness('+br.toFixed(3)+')';
+  }
+  tint.style.opacity='0'; veil.style.transform='scaleX(0)';
+  halfL.style.transform=halfR.style.transform='scaleX(0)';
+}
+function renderExit(e){
+  tint.style.opacity=sample(TINT_KEYS,e).toFixed(3);
+  const hidden=e>=VEIL_HIDE;
+  setBody(bodyA,hidden?'hidden':'visible');
+  if(!hidden){
+    veil.style.transform='scaleX('+sample(VEIL_KEYS,e).toFixed(4)+')';
+    halfL.style.transform=halfR.style.transform='scaleX(0)';
+  }else{
+    veil.style.transform='scaleX(0)';
+    halfL.style.transform='scaleX('+(1-ramp(HALF_L,e)).toFixed(4)+')';
+    halfR.style.transform='scaleX('+(1-ramp(HALF_R,e)).toFixed(4)+')';
+  }
+}
+function renderEnter2(rec,el){
+  const noSub = !rec.s;
+  card2.className='card2 '+rec.type+(noSub?' noSub':'');
+  card2.style.visibility='visible';
+  setBody(bodyB,'visible');
+  const wk=rec.type==='banner'?W_B1:W_B2;
+  card2.style.transform='scaleX('+sample(wk,el).toFixed(4)+')';
+  const g=sample(B_GRAY,el);
+  base2.style.background='rgb('+g.toFixed(1)+','+g.toFixed(1)+','+g.toFixed(1)+')';
+  const tg=sample(B_TITLE,el);
+  elT2.style.opacity=el<0.3?'0':'1';
+  elT2W.style.opacity=(el<0.3?0:clamp01((tg-61)/(255-61))).toFixed(3);
+  const titleOffset = (rec.type === 'banner' && rec.s) ? 50 : 0;
+  const ty = el < 0.3 ? titleOffset : sample(B_TITLE_Y, el) * (titleOffset / 92);
+  let scale = 1, bright = 1;
+  if (!rec.s) {
+    const p = clamp01((el - 0.3) / 0.15);
+    scale = 1 + 0.5 * (1 - p);
+    bright = 1 + 1.0 * (1 - p);
+  }
+  elT2Wrap.style.transform='translateY('+ty.toFixed(1)+'px) scale('+scale.toFixed(3)+')';
+  elT2Wrap.style.filter='brightness('+bright.toFixed(3)+')';
+  elD2.style.opacity=ramp(B_DASH,el).toFixed(3);
+  const ruleOn=el>=0.467?1:0;
+  ruleT.style.opacity=ruleOn; ruleB.style.opacity=ruleOn;
+  if(rec.type==='banner'&&rec.s){
+    const sy=el<0.7?-39:sample(B_SUB_Y,el);
+    elS2.style.transform='translateY('+sy.toFixed(1)+'px)';
+    elS2.style.opacity=ramp(B_SUB,el).toFixed(3);
+  }else{
+    elS2.style.opacity='0';
+  }
+  tint2.style.opacity='0'; veil2.style.transform='scaleX(0)';
+  halfL2.style.transform=halfR2.style.transform='scaleX(0)';
+}
+function renderExit2(e){
+  tint2.style.opacity=sample(B_TINT,e).toFixed(3);
+  const hidden=e>=B_VEIL_HIDE;
+  setBody(bodyB,hidden?'hidden':'visible');
+  if(!hidden){
+    veil2.style.transform='scaleX('+sample(B_VEIL,e).toFixed(4)+')';
+    halfL2.style.transform=halfR2.style.transform='scaleX(0)';
+  }else{
+    veil2.style.transform='scaleX(0)';
+    halfL2.style.transform='scaleX('+(1-ramp(B_HALF_L,e)).toFixed(4)+')';
+    halfR2.style.transform='scaleX('+(1-ramp(B_HALF_R,e)).toFixed(4)+')';
+  }
+}
+function raf(cb,sec){
+  const t0=performance.now();
+  return new Promise(done=>{
+    (function step(){
+      const el=(performance.now()-t0)/1000;
+      cb(el);
+      if(el<sec) requestAnimationFrame(step); else done();
+    })();
+  });
+}
+function resetAll(){
+  card.style.transform='scaleX(0)'; card.style.visibility='hidden';
+  card2.style.transform='scaleX(0)'; card2.style.visibility='hidden';
+  elI.style.transform='scale(1)'; elI.style.filter='brightness(1)';
+  veil.style.transform='scaleX(0)'; veil2.style.transform='scaleX(0)';
+  halfL.style.transform=halfR.style.transform='scaleX(0)';
+  halfL2.style.transform=halfR2.style.transform='scaleX(0)';
+  tint.style.opacity='0'; tint2.style.opacity='0';
+}
+
+/* 测量文字宽度 */
+const measureCtx=document.createElement('canvas').getContext('2d');
+function measureW(text,font){
+  measureCtx.font=font;
+  return measureCtx.measureText(text).width;
+}
+
+/* toast 窄条: 根据文字宽度自适应, 始终居中 */
+function fitToastWidth(rec){
+  if(rec.type!=='toast') return;
+  const textW=measureW(rec.t,'84px DFUI,"Microsoft YaHei",sans-serif');
+  const padX=200;
+  const w=Math.ceil(textW+padX*2);
+  const h=248;
+  card2.style.width=w+'px';
+  card2.style.left=((1920-w)/2)+'px';
+  card2.style.top='432px';
+  // 虚线位置相对卡片居中
+  elD2.style.left='30px';
+  elD2.style.right='30px';
+}
+
+async function play(rec,btnEl){
+  if(running) return;
+  running=true;
+  currentRec=rec;
+  document.querySelectorAll('.msgBtn').forEach(b=>b.classList.remove('playing'));
+  if(btnEl) btnEl.classList.add('playing');
+  resetAll();
+  await wait(20);
+  const hold=Math.max(200,parseInt(document.getElementById('inHold').value||'1500',10));
+
+  if(rec.type==='icon'){
+    elT.textContent=rec.t; elTW.textContent=rec.t;
+    elS.textContent=rec.s||''; elI.src='assets/'+rec.icon+'.png';
+    await raf(el=>renderEnter(el),1.05); renderEnter(1.05);
+    await wait(hold);
+    await raf(e=>renderExit(e),1.06);
+  }else{
+    elT2.textContent=rec.t; elT2W.textContent=rec.t; elS2.textContent=rec.s||'';
+    fitToastWidth(rec);
+    await raf(el=>renderEnter2(rec,el),1.15); renderEnter2(rec,1.15);
+    await wait(hold);
+    await raf(e=>renderExit2(e),.95);
+  }
+  resetAll();
+  if(btnEl) btnEl.classList.remove('playing');
+  running=false;
+}
+
+/* ══════════ 构建提示库按钮 ══════════ */
+const msgGrid=document.getElementById('msgGrid');
+function buildGrid(cat){
+  msgGrid.innerHTML='';
+  MSG.forEach((m,i)=>{
+    if(cat!=='all' && m.cat!==cat) return;
+    const b=document.createElement('button');
+    b.className='msgBtn';
+    let icoHtml;
+    if(m.type==='icon'){
+      icoHtml='<img src="assets/'+m.icon+'.png" alt="">';
+    }else{
+      icoHtml='<span style="font-size:10px;color:#4ec9d8">'+(m.type==='banner'?'横':'条')+'</span>';
+    }
+    b.innerHTML='<div class="ico">'+icoHtml+'</div>'+
+      '<div class="meta"><div class="t">'+m.t+'</div>'+
+      '<div class="tag">'+(m.s?m.s.slice(0,14):'')+'</div></div>';
+    b.onclick=()=>{ idx=i; play(m,b); };
+    msgGrid.appendChild(b);
+  });
+}
+buildGrid('skill');
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    buildGrid(tab.dataset.cat);
+  };
+});
+
+/* 即时播报 */
+document.getElementById('inType').onchange=function(){
+  document.getElementById('iconFieldWrap').style.display=this.value==='icon'?'':'none';
+};
+document.getElementById('btnFire').onclick=()=>{
+  const t=document.getElementById('inTitle').value.trim();
+  if(!t) return;
+  const rec={
+    type:document.getElementById('inType').value,
+    t:t,
+    s:document.getElementById('inSub').value.trim(),
+    icon:document.getElementById('inIcon').value,
+  };
+  play(rec,null);
+};
+addEventListener('keydown',e=>{
+  if(e.code==='Enter' && document.activeElement.tagName==='INPUT'){
+    document.getElementById('btnFire').click();
+  }
+});
+
+/* 蓝幕开关 */
+document.getElementById('chkChroma').onchange=e=>
+  document.getElementById('stage').classList.toggle('chroma',e.target.checked);
+
+/* ══════════ 导出视频 ══════════
+   不再对主窗口 capturePage: 屏幕只有 1536x960 逻辑像素, 1920x1080 的舞台
+   塞不进可见窗口, 抓出来只有 1903x1154 且右侧/底部被裁掉 => 视频错位。
+   现在由主进程开一个隐藏的 1920x1080 抓取窗口逐帧渲染并抓取, 输出精确到 1920x1080。 */
+
+const FPS=30;
+const btnExport=document.getElementById('btnExport');
+const exportStatus=document.getElementById('exportStatus');
+const BG_LABEL={chroma:'蓝幕',black:'黑底',transparent:'透明'};
+
+btnExport.onclick=async function(){
+  if(!currentRec){exportStatus.textContent='请先预览一条提示（点提示库或点"立即弹出"）';setTimeout(()=>exportStatus.textContent='',2000);return;}
+  if(!window.electronAPI||!window.electronAPI.exportOpen){
+    exportStatus.textContent='失败: 请通过 Electron 启动';
+    setTimeout(()=>exportStatus.textContent='',4000); return;
+  }
+  btnExport.disabled=true;
+  const rec=currentRec;
+  const bg=document.getElementById('selExportBg').value;      // chroma | black | transparent
+  const holdMs=Math.max(200,parseInt(document.getElementById('inHold').value||'1500',10));
+  const holdS=holdMs/1000;
+  const enterDur=rec.type==='icon'?1.05:1.15;
+  const exitDur=rec.type==='icon'?1.06:0.95;
+  const total=enterDur+holdS+exitDur;
+  const totalFrames=Math.round(total*FPS);
+  const safeTitle=rec.t.replace(/[\\/:*?"<>|]/g,'_').slice(0,40);
+  const transparent=bg==='transparent';
+  const ext=transparent?'webm':'mp4';
+
+  try{
+    exportStatus.textContent='准备中…';
+    const openRes=await window.electronAPI.exportOpen({
+      defaultName:`DF提示_${BG_LABEL[bg]||bg}_${safeTitle}.${ext}`,
+      format:transparent?'webm':'mp4',
+      bg:bg,
+    });
+    if(openRes.canceled){ exportStatus.textContent='已取消'; setTimeout(()=>exportStatus.textContent='',3000); return; }
+    if(openRes.error) throw new Error(openRes.error);
+
+    await window.electronAPI.exportSetup({bg:bg});
+    await window.electronAPI.exportPrepare({
+      type:rec.type, t:rec.t, s:rec.s||'', icon:rec.icon||'',
+    });
+
+    for(let f=0;f<totalFrames;f++){
+      const r=await window.electronAPI.exportFrame({
+        t:f/FPS, enterDur:enterDur, hold:holdS, kind:rec.type,
+      });
+      if(r&&r.error) throw new Error(r.error);
+      if(f%5===0||f===totalFrames-1){
+        exportStatus.textContent='渲染中… '+Math.floor(f/totalFrames*100)+'% ('+(f+1)+'/'+totalFrames+'帧)';
+      }
+    }
+
+    exportStatus.textContent='编码中…';
+    const endRes=await window.electronAPI.exportClose();
+    if(endRes.error) throw new Error(endRes.error);
+    exportStatus.textContent='完成 ✓ '+Math.round((endRes.size||0)/1024)+'KB · '+
+      endRes.frames+'帧 → '+endRes.filePath;
+  }catch(err){
+    exportStatus.textContent='失败: '+(err&&err.message?err.message:err);
+    console.error(err);
+    try{ await window.electronAPI.exportAbort(); }catch(_){}
+    setTimeout(()=>exportStatus.textContent='',10000);
+  }finally{
+    if(typeof fit==='function') fit();
+    if(typeof resetAll==='function') resetAll();
+  }
+  btnExport.disabled=false;
+  setTimeout(()=>exportStatus.textContent='',10000);
+};
+
+/* 初始 */
+buildGrid('skill');
+</script>
+</body>
+</html>
